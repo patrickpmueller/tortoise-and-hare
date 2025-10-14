@@ -5,5 +5,5 @@
 *.log
 *.pdf
 *.run.xml
-*.synctex.g\
+*.synctex.gz
 _minted*
