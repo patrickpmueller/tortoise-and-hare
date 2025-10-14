@@ -24,11 +24,11 @@
     text centered, draw=black, fill=gray!5, font=\small,
     inner xsep=8pt,
     path picture={
-        \draw[line width=0.8pt] 
-            ([xshift=0.15cm]path picture bounding box.north west) -- 
+        \draw[line width=0.8pt]
+            ([xshift=0.15cm]path picture bounding box.north west) --
             ([xshift=0.15cm]path picture bounding box.south west);
-        \draw[line width=0.8pt] 
-            ([xshift=-0.15cm]path picture bounding box.north east) -- 
+        \draw[line width=0.8pt]
+            ([xshift=-0.15cm]path picture bounding box.north east) --
             ([xshift=-0.15cm]path picture bounding box.south east);
     }
 ]
@@ -68,13 +68,13 @@
     \subsection{Why a computational approach was used}
     \label{sec:approach}
     A computational approach is best here as the races can be quite long and can be simulated more
-    quickly. Therefore the user can run more simulations and the betting element (which is 
+    quickly. Therefore the user can run more simulations and the betting element (which is
     the main engagement device) is more prominent.
 
-    The programming language that is used in this project is Rust \cite{rust} which provides a 
+    The programming language that is used in this project is Rust \cite{rust} which provides a
     safe, compiled language. The main reasons for this is to offer security and help with data
     validation. By having using a compiled language, the program will run more efficiently, which
-    isn't a major concern right now but allows for a better integration of a more complex UI and 
+    isn't a major concern right now but allows for a better integration of a more complex UI and
     game mechanic later. Furthermore, the game is aimed at children who often do not have the money
     to buy powerful PCs, and performance could be a major factor later on.
 
@@ -89,7 +89,7 @@
             \hline
             Name & type \\
             \hline
-            \texttt{race\_length} & \texttt{u32} \\ 
+            \texttt{race\_length} & \texttt{u32} \\
             \texttt{tortoise\_speed\_interval} & \texttt{Interval} \\
             \texttt{hare\_speed\_interval} & \texttt{Interval} \\
             \texttt{hare\_sleep\_chance} & \texttt{f64} \\
@@ -104,7 +104,7 @@
             \hline
             Name & type \\
             \hline
-            \texttt{hare} & \texttt{Hare} \\ 
+            \texttt{hare} & \texttt{Hare} \\
             \texttt{tortoise} & \texttt{Tortoise} \\
             \texttt{winners} & \texttt{WinnerTable} \\
             \texttt{money} & \texttt{i32} \\
@@ -164,18 +164,18 @@
 
     };
 
-    
+
     \draw[->, thick] (hare.east) -- node[above,sloped]{results in} (winner.west);
     \draw[->, thick] (tortoise.east) -- node[below,sloped]{results in} (winner.west);
     \end{tikzpicture}
-    \caption{The structure diagram of the \texttt{struct}s \texttt{Hare}, \texttt{Tortiose} 
+    \caption{The structure diagram of the \texttt{struct}s \texttt{Hare}, \texttt{Tortiose}
     and \texttt{WinnerTable}}
     \label{fig:structs}
     \end{figure}
 
     \section{Outline of Program}
     \subsection{Overview of main algorithm}
-    The flowchart in Figure~\ref{fig:flw-prgm} outlines clearly the main program loop and how the main 
+    The flowchart in Figure~\ref{fig:flw-prgm} outlines clearly the main program loop and how the main
     part of the program calls the smaller modules. Below, the same idea, written in pseudocode, can be found.
     \begin{listing}
         \begin{minted}[frame=lines]{text}
@@ -255,11 +255,11 @@
     to such an error in Rust would be a ``\texttt{panic}'', which stops the program abruptly and may
     instill annoyance in users if they experience such an error in the middle of the game.
 
-    To ensure the correct functionality of individual modules, unit testing will be used throughout 
+    To ensure the correct functionality of individual modules, unit testing will be used throughout
     the development phase. This ensures that the individual modules outlined in Section~\ref{sec:modules}
-    are working as intended. The that is used for testing is outlined in Section ~\ref{sec:unit-test} 
+    are working as intended. The that is used for testing is outlined in Section ~\ref{sec:unit-test}
 
-    Furthermore, testing after development with valid, boundary, invalid and erroneous data will ensure 
+    Furthermore, testing after development with valid, boundary, invalid and erroneous data will ensure
     that the whole program works as expected. This data is outlined in Section~\ref{sec:whole-test}.
     \subsection{Unit Testting}
     \label{sec:unit-test}
