@@ -1,0 +1,9 @@
+/target
+*.aux
+*.bbl
+*.bcf
+*.log
+*.pdf
+*.run.xml
+*.synctex.g\
+_minted*
