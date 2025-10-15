@@ -33,6 +33,18 @@
     }
 ]
 \tikzstyle{arrow} = [thick, ->, >=Stealth]
+\tikzstyle{structnode} = [
+    rectangle,                 % Shape
+    draw=black,                % Border color
+    thick,                     % Slightly thicker border
+    rounded corners=2pt,       % Optional: slightly rounded
+    minimum width=2cm,       % Width
+    minimum height=1cm,        % Height
+	inner xsep=5pt,
+    text centered,             % Centered text
+    fill=gray!15,              % Subtle background
+    font=\small                % Font size
+]
 
 
 
@@ -250,10 +262,51 @@ part of the program calls the smaller modules. Below, the same idea, written in 
 \end{figure}
 \subsection{Modularity}
 \label{sec:modules}
+\begin{figure}[!ht]
+	\centering
+	\begin{tikzpicture}[node distance=0.5cm]
+
+		% Top-level module
+		\node[structnode] (game) {Tortoise and Hare Game};
+
+		% Input module
+		\node[structnode, below left=1.5cm and 1cm of game] (io) {I/O};
+		\node[structnode, below=of io, xshift=1cm] (cli_io) {CLI I/O};
+		\node[structnode, below=of cli_io] (validation) {Validation};
+		\node[structnode, below=of validation] (storage) {Savegames};
+
+
+		% Race module
+		\node[structnode, below=1.5cm of game] (race) {Race};
+		\node[structnode, below=of race, xshift=1cm] (move) {Movement};
+		\node[structnode, below=of move] (end) {End condition};
+
+		% Statistics module
+		\node[structnode, below right=1.5cm and 1cm of game] (bet) {Betting};
+		\node[structnode, below=of bet, xshift=1cm] (odds) {Odds};
+		\node[structnode, below=of odds] (bank) {Bank};
+
+		% Arrows
+		\draw[arrow] (game.south) -- ++(0,-0.75) -| (io);
+		\draw[arrow] (io.south west) |- (cli_io);
+		\draw[arrow] (io.south west) |- (validation);
+		\draw[arrow] (io.south west) |- (storage);
+
+		\draw[arrow] (game.south) -- ++(0,-0.75) -| (race);
+		\draw[arrow] (race.south west) |- (move);
+		\draw[arrow] (race.south west) |- (end);
+
+		\draw[arrow] (game.south) -- ++(0,-0.75) -| (bet);
+		\draw[arrow] (bet.south west) |- (bank);
+		\draw[arrow] (bet.south west) |- (odds);
+	\end{tikzpicture}
+	\caption{Structure diagram outlining the main modules}
+
+\end{figure}
 
 \section{Test data}
 \subsection{Inputs and testing approach}
-The main data inputs are: asdf
+The main data inputs are:
 \begin{itemize}
 	\item Choosing between betting on the tortoise or hare
 	\item Entering the amount of money to bet
