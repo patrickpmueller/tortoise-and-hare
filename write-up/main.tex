@@ -61,12 +61,18 @@
 \subsection{Purpose}
 The main purpose of the program is entertainment as it is a game to be enjoyed. It
 simulates the classic story of the tortoise and the hare. To make the game enjoyable,
-the user is asked to bet on either the hare or the tortoise, and the money they bet
-doubles when they win and they lose all of the money they bet if they lose.
+the user is asked to bet on either the hare or the tortoise. This money is then used
+to play another round as long as the user has enough money. The more rounds a user
+is able to play, the better their final score.
 \subsection{Intended user}
 Possible users of the program are younger children as the game loop is very simple and
 may not appeal as much to older children, teenagers or adults. It should therefore be easy
-to use and understand.
+to use and understand. However, there may be moral considerations when aiming a game that
+involves gambling and betting to (young) children. This is combated by using the artificial
+currency of "carrots" which the user can use to bet on an animal. If they win, they gain
+"carrots". The aim of the game is therefore not to make the most money gambling but instead
+to collect the most "carrots" in a given number of rounds to feed \cite{hare-diet,tortoise-diet}
+the animals. The animals require feeding to play another round.
 \subsection{Functionality}
 A simple pseudo-random number generator based simulation of the game of ``the hare and the
 tortoise''. The initial parameters for the simulation are:
@@ -78,23 +84,44 @@ tortoise''. The initial parameters for the simulation are:
 	\item However, there is a \qty{25}{\percent} chance that the hare doesn't move
 \end{itemize}
 
+The betting system has odds set out to increase the user's "carrots" slightly if the fee for
+playing a new round is not taken into account. However, as there is a fee to play each round,
+on average, the number of carrots that a player has tends to zero. More on the specific carrot
+mechanic in the Betting section.
+
 \subsection{Why a computational approach was used}
 \label{sec:approach}
 A computational approach is best here as the races can be quite long and can be simulated more
-quickly. Therefore the user can run more simulations and the betting element (which is
-the main engagement device) is more prominent.
+quickly. As the game is aimed at children, a lengthy process of e.g. rolling dice may be unrealistic
+as most children will be bored before the first game even finishes. For example, on average the
+tortoise would take \(\frac{1000}{7.5} \approx 134\) rounds to complete a race. Assuming a dice roll
+every \qty{2}{\second}, this will take
+\(134 \times \qty{2}{\second} = \qty{268}{\second} \approx \qty{4.5}{\minute}\) of dice rolls.
 
 The programming language that is used in this project is Rust \cite{rust} which provides a
 safe, compiled language. The main reasons for this is to offer security and help with data
 validation. By having using a compiled language, the program will run more efficiently, which
 isn't a major concern right now but allows for a better integration of a more complex UI and
-game mechanic later. Furthermore, the game is aimed at children who often do not have the money
-to buy powerful PCs, and performance could be a major factor later on.
+game mechanics later. Furthermore, the game is aimed at children who often do not have the money to
+buy powerful PCs, and performance could be a major factor later if new features get added.
+From a development point of view, using Rust allows for the use of modern tools such as functional
+programming to keep code neat, tidy, legible and extensible.
 
 \section{Data structures}
 The constants used in the program are defined in Table~\ref{tab:consts}, and the variables
-in Table~\ref{tab:vars}. Four custom structs as well as one enum are used for modularity, and their relationship as
-well as structure can be seen in Figure~\ref{fig:structs}.
+in Table~\ref{tab:vars}. Four custom structs as well as one enum are used for modularity, and
+their relationship as well as structure can be seen in Figure~\ref{fig:structs}.
+
+The decision to make \texttt{Animal} an enum has the upside of allowing the addition of  more animals
+while minimizing the risk that the new animals aren't properly implemented in code as Rust ensures that
+all enum elements are covered whenever one is using enums. This improves the program's extensibility
+greatly.
+
+The four structs used allow the code to stay segmented and modular, therefore allowing a team of
+developers to work on the project simutaneously. When winning is being implemented, one doesn't have
+to think about how the betting mechanic works, and instead leave that up to the \texttt{Bet} struct
+to hanlde. This improves efficiency when developing and allows for greater extensibility later in the
+program's lifecycle.
 
 \begin{table}[!ht]
 	\centering
@@ -303,6 +330,9 @@ part of the program calls the smaller modules. Below, the same idea, written in 
 	\caption{Structure diagram outlining the main modules}
 
 \end{figure}
+
+\section{In-depth Gameplay analysis}
+
 
 \section{Test data}
 \subsection{Inputs and testing approach}
