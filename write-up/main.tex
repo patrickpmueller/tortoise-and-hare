@@ -100,25 +100,33 @@ every \qty{2}{\second}, this will take
 
 The programming language that is used in this project is Rust \cite{rust} which provides a
 safe, compiled language. The main reasons for this is to offer security and help with data
-validation. By having using a compiled language, the program will run more efficiently, which
-isn't a major concern right now but allows for a better integration of a more complex UI and
-game mechanics later. Furthermore, the game is aimed at children who often do not have the money to
-buy powerful PCs, and performance could be a major factor later if new features get added.
-From a development point of view, using Rust allows for the use of modern tools such as functional
-programming to keep code neat, tidy, legible and extensible.
+validation. As the language is precompiled into machine code, the user doesn't have to install
+an interpreter like Python or the JRE. This may reduce the complexity of the install process
+for the users, which is beneficial as the game is aimed at young children. Given that most
+desktop PCs and laptops run either Windows 10/11 x86\_64/arm64 or macOS arm64 \cite{os},
+and Rust can cross-compile for all of those CPU architectures and operating systems, compatability
+problems shouldn't cause a major issue. By using a compiled language, the program will run
+more efficiently, which isn't a major concern right now but allows for a better integration of a
+more complex UI and game mechanics later. Furthermore, the game is aimed at children who often do
+not have the money to buy powerful PCs, and performance could be a major factor later if new
+features get added. From a development point of view, using Rust allows for the use of modern tools
+such as functional programming to keep code neat, tidy, legible and extensible.
 
 \section{Data structures}
-The constants used in the program are defined in Table~\ref{tab:consts}, and the variables
-in Table~\ref{tab:vars}. Four custom structs as well as one enum are used for modularity, and
-their relationship as well as structure can be seen in Figure~\ref{fig:structs}.
+The constants used in the program are defined in Table~\ref{tab:consts}. These are carefully chosen
+to allow for quick changes of the game's main parameters. Variables are listed in Table~\ref{tab:vars}.
+Great care has been taken to reduce unnecessary variables while keeping code clean and readable, as
+well as ready for future expansion. Therefore, four custom structs (groups of data) as well as one
+enum (group of structs) are used for modularity, and their relationship as well as structure can be
+seen in Figure~\ref{fig:structs}.
 
 The decision to make \texttt{Animal} an enum has the upside of allowing the addition of  more animals
 while minimizing the risk that the new animals aren't properly implemented in code as Rust ensures that
 all enum elements are covered whenever one is using enums. This improves the program's extensibility
-greatly.
+and safety greatly.
 
-The four structs used allow the code to stay segmented and modular, therefore allowing a team of
-developers to work on the project simutaneously. When winning is being implemented, one doesn't have
+The four structs used allow the code to stay segmented and modular, therefore allowing a team of developers
+to work on the project simutaneously. For instance, when winning is being implemented, one doesn't have
 to think about how the betting mechanic works, and instead leave that up to the \texttt{Bet} struct
 to hanlde. This improves efficiency when developing and allows for greater extensibility later in the
 program's lifecycle.
@@ -177,7 +185,7 @@ program's lifecycle.
 		};
 
 		% Hare struct
-		\node[struct, below left=2cm and 0.5cm of animal] (hare) {
+		\node[struct, below left=1.5cm and -0.3cm of animal] (hare) {
 			\begin{tabular}{l}
 				\multicolumn{1}{c}{Hare} \\ \hline
 				dist: f64                \\
@@ -186,7 +194,7 @@ program's lifecycle.
 		};
 
 		% Tortoise struct
-		\node[struct, below right=2cm and 0.5cm of animal] (tortoise) {
+		\node[struct, below right=1.5cm and -0.3cm of animal] (tortoise) {
 			\begin{tabular}{l}
 				\multicolumn{1}{c}{Tortoise} \\ \hline
 				dist: f64                    \\
@@ -194,7 +202,7 @@ program's lifecycle.
 		};
 
 		% WinnerTable struct
-		\node[struct, right=4.5cm of animal] (winner) {
+		\node[struct, right=4cm of animal] (winner) {
 			\begin{tabular}{l}
 				\multicolumn{1}{c}{WinnerTable} \\ \hline
 				hare: u32                       \\
@@ -204,7 +212,7 @@ program's lifecycle.
 		};
 
 		% Bet struct
-		\node[struct, above left=1.5cm and 0.5cm of animal] (bet) {
+		\node[struct, above left=1.5cm and -0.3cm of animal] (bet) {
 			\begin{tabular}{l}
 				\multicolumn{1}{c}{Bet} \\ \hline
 				amount: f64             \\
@@ -217,7 +225,6 @@ program's lifecycle.
 		\draw[<-, thick] (hare.north) -- node[above,sloped]{includes} (animal.south west);
 		\draw[<-, thick] (tortoise.north) -- node[above,sloped]{includes} (animal.south east);
 		\draw[->, thick] (bet.south) -- node[below,sloped]{includes} (animal.north west);
-
 	\end{tikzpicture}
 	\caption{The structure diagram of the \texttt{struct}s \texttt{Hare}, \texttt{Tortiose}}
 	\label{fig:structs}
@@ -226,11 +233,18 @@ program's lifecycle.
 \section{Outline of Program}
 \subsection{Overview of main algorithm}
 The flowchart in Figure~\ref{fig:flw-prgm} outlines clearly the main program loop and how the main
-part of the program calls the smaller modules. Below, the same idea, written in pseudocode, can be found.
+part of the program calls the smaller modules. Below, the same idea can be found, written in pseudocode
+(See Listing~\ref{lst:psd-overview}). It is is meant as a visual as well as textual overview for later
+reference.
+
+The game loop consists of two main parts: simulating a race, and taking and evaluating bets. These aim to
+give an engaging yet simple game loop which can be easily understood by younger users but still be
+enjoyable.
+
 \begin{listing}
 	\begin{minted}[frame=lines]{text}
         DO
-            bet := setup_bet(Input("How much to bet?"), Input("Betting on tortoise or hare"))
+            bet := setup_bet(Input("How much to bet?"), Input("Who to bet on?"))
             WHILE NOT race_ended()
                 move_animals()
             ENDWHILE
@@ -289,6 +303,32 @@ part of the program calls the smaller modules. Below, the same idea, written in 
 \end{figure}
 \subsection{Modularity}
 \label{sec:modules}
+
+This project is split into two parts: a binary crate and a set of library crates. Crates are a collection of code
+in Rust which are equivalent to libraries in other build systems. The advantage of splitting the main binary
+(which contains any code specific to this version of the program) and a set of library crates (which can be reused
+across multiple projects) is greater flexibility when updating the program.
+
+The three library crates will be \texttt{io}, \texttt{race} and \texttt{betting}. These can be independently
+developed, tested, debugged and refined. A visual overview of modules can be found in Figure~\ref{fig:structure}.
+Below is an explanation of each of the crates (and respective modules found in the crate) and their function:
+\begin{itemize}
+	\item I/O (stands for Input/Output): manages displaying results to the user, getting input
+	      from the user, including any validation necessary; furthermore, \texttt{io} crate also manages
+	      savegames and stats management, as all these are part of inputting and outputting data for the user;
+	      contains three \texttt{mod}s: \texttt{cli}, \texttt{validation} and \texttt{savegames}
+	\item Race: manages the race logic, including movement of the hare and tortoise, and the end
+	      condition; contains two \texttt{mod}s: \texttt{movement} and \texttt{finish}
+	\item Betting: manages the betting mechanic, including odds, saving money and the price to pay per round;
+	      contains two \texttt{mod}s: \texttt{odds} and \texttt{bank}
+\end{itemize}
+
+The binary crate is the final program that the user runs. It links the individual elements together as
+showin in Figure~\ref{fig:flw-prgm}. The pseudocode for this crate can be found in
+Listing~\ref{lst:psd-overview}. Separating the binary crates from the libraries allows for simple
+such as changing the order of the game loop, or compiling different games with different game loops by
+reusing the existing library crates and building a new binary crate.
+
 \begin{figure}[!ht]
 	\centering
 	\begin{tikzpicture}[node distance=0.5cm]
@@ -306,7 +346,7 @@ part of the program calls the smaller modules. Below, the same idea, written in 
 		% Race module
 		\node[structnode, below=1.5cm of game] (race) {Race};
 		\node[structnode, below=of race, xshift=1cm] (move) {Movement};
-		\node[structnode, below=of move] (end) {End condition};
+		\node[structnode, below=of move] (end) {Finish line};
 
 		% Statistics module
 		\node[structnode, below right=1.5cm and 1cm of game] (bet) {Betting};
@@ -327,14 +367,14 @@ part of the program calls the smaller modules. Below, the same idea, written in 
 		\draw[arrow] (bet.south west) |- (bank);
 		\draw[arrow] (bet.south west) |- (odds);
 	\end{tikzpicture}
-	\caption{Structure diagram outlining the main modules}
-
+	\caption{Structure diagram outlining the three library crates and their functions}
+	\label{fig:structure}
 \end{figure}
 
 \section{In-depth Gameplay analysis}
 
 
-\section{Test data}
+\section{Testing}
 \subsection{Inputs and testing approach}
 The main data inputs are:
 \begin{itemize}
@@ -347,19 +387,22 @@ Because Rust is used as the programming language (see Section~\ref{sec:approach}
 and errors such as buffer overflow errors are dealt with by the language. However, testing that
 these safeguards are in place properly is still good practice, especially as the default response
 to such an error in Rust would be a ``\texttt{panic}'', which stops the program abruptly and may
-instill annoyance in users if they experience such an error in the middle of the game.
+cause users to be annoyed at the program if they experience such an error in the middle of the game.
+Furthermore, these errors are not supposed to happen in production and are a safety mechanism rather
+than a feature to rely on.
 
-To ensure the correct functionality of individual modules, unit testing will be used throughout
-the development phase. This ensures that the individual modules outlined in Section~\ref{sec:modules}
-are working as intended. The that is used for testing is outlined in Section ~\ref{sec:unit-test}
+To ensure the correct functionality of individual crates and modules, unit testing will be used throughout
+the development phase. This ensures that the individual crates and modules outlined in Section~\ref{sec:modules}
+are working as intended, by testing them independently from other parts of the program. The approach that is
+used for unit testing is outlined in Section ~\ref{sec:unit-test}
 
 Furthermore, testing after development with valid, boundary, invalid and erroneous data will ensure
 that the whole program works as expected. This data is outlined in Section~\ref{sec:whole-test}.
-\subsection{Unit Testting}
+\subsection{Unit Testing}
 \label{sec:unit-test}
 \subsection{Validation Testing}
 \label{sec:whole-test}
+\subsection{Test results}
 \section{Source code}
-\section{Testing}
 \section{Evaluation}
 \end{document}

@@ -7,3 +7,9 @@
 *.run.xml
 *.synctex.gz
 _minted*
+*.bbl-*
+*.bcf-*
+*.blg
+*.dvi
+*.fdb_latexmk
+*.fls
