@@ -116,9 +116,9 @@ such as functional programming to keep code neat, tidy, legible and extensible.
 The constants used in the program are defined in Table~\ref{tab:consts}. These are carefully chosen
 to allow for quick changes of the game's main parameters. Variables are listed in Table~\ref{tab:vars}.
 Great care has been taken to reduce unnecessary variables while keeping code clean and readable, as
-well as ready for future expansion. Therefore, four custom structs (groups of data) as well as one
-enum (group of structs) are used for modularity, and their relationship as well as structure can be
-seen in Figure~\ref{fig:structs}.
+well as ready for future expansion. Therefore, four custom structs (structured groups of data) as well as one
+enum (list of structs sharing similar properties) are used for modularity, and their relationship as well as
+structure can be seen in Figure~\ref{fig:structs}.
 
 The decision to make \texttt{Animal} an enum has the upside of allowing the addition of  more animals
 while minimizing the risk that the new animals aren't properly implemented in code as Rust ensures that
