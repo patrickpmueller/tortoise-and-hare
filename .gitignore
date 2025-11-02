@@ -13,3 +13,4 @@ _minted*
 *.dvi
 *.fdb_latexmk
 *.fls
+*.csv
