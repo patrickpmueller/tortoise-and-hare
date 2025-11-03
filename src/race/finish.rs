@@ -3,7 +3,7 @@ use crate::{Animal, RoundResult};
 pub fn get_result(animals: &Vec<Animal>) -> RoundResult {
     let mut winners: Vec<&Animal> = vec![];
     for animal in animals {
-        if animal.get_dist() >= 1000.0 {
+        if animal.get_dist() >= crate::RACE_LENGTH {
             winners.push(animal);
         }
     }
@@ -12,7 +12,7 @@ pub fn get_result(animals: &Vec<Animal>) -> RoundResult {
         return RoundResult::Draw;
     }
 
-    match winners.get(0) {
+    match winners.first() {
         Some(winner) => RoundResult::Winner(**winner),
         None => RoundResult::InProgress,
     }

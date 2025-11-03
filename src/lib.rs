@@ -1,6 +1,7 @@
 pub mod betting;
 pub mod io;
 pub mod race;
+pub mod stats;
 
 pub static RACE_LENGTH: f64 = 1000.0;
 pub static HARE_SLEEP_CHANCE: f64 = 0.25;
@@ -31,33 +32,6 @@ pub struct Hare {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Tortoise {
     pub dist: f64,
-}
-
-#[derive(Clone, Copy)]
-pub struct WinnerTable {
-    hare: u32,
-    tortoise: u32,
-    draw: u32,
-}
-impl WinnerTable {
-    pub const fn new() -> Self {
-        WinnerTable {
-            hare: 0,
-            tortoise: 0,
-            draw: 0,
-        }
-    }
-
-    pub fn update(&mut self, winner: &RoundResult) {
-        match winner {
-            RoundResult::Draw => self.draw += 1,
-            RoundResult::Winner(winner) => match winner {
-                Animal::Hare(_) => self.hare += 1,
-                Animal::Tortoise(_) => self.hare += 1,
-            },
-            _ => {}
-        }
-    }
 }
 
 impl Animal {

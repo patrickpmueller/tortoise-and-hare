@@ -3,7 +3,7 @@ use std::{fs::File, path::Path};
 
 use sha3::{Digest, Sha3_256};
 
-use crate::WinnerTable;
+use crate::stats::WinnerTable;
 
 pub fn delete() {
     let path = Path::new("t_and_h_savegame.csv");

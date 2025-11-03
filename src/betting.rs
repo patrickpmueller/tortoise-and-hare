@@ -13,26 +13,25 @@ impl Bet {
         Bet { on, amount }
     }
 
-    pub fn next_balance(&self, balance: i32, result: &RoundResult) -> i32 {
-        let mut balance = balance;
+    pub fn next_balance(&self, old_balance: i32, result: &RoundResult) -> i32 {
+        let new_balance;
         match result {
             RoundResult::Draw => {
-                balance -= self.amount;
-                balance -= crate::FIXED_COSTS;
+                new_balance = old_balance - self.amount - crate::FIXED_COSTS;
                 io::cli::message(&format!(
                     "You have lost your bet and have to give {} carrots away.",
                     self.amount
                 ));
             }
             RoundResult::Winner(winner) => {
-                if &self.on == winner {
-                    balance += self.amount;
+                if self.on.get_animal() == winner.get_animal() {
+                    new_balance = old_balance + self.amount - crate::FIXED_COSTS;
                     io::cli::message(&format!(
                         "You have won your bet and get {} more carrots.",
                         self.amount
                     ));
                 } else {
-                    balance -= self.amount;
+                    new_balance = old_balance - self.amount - crate::FIXED_COSTS;
                     io::cli::message(&format!(
                         "You have lost your bet and have to give {} carrots away.",
                         self.amount
@@ -43,11 +42,10 @@ impl Bet {
                     "The animals are hungry need to eat. You give them {} carrots.",
                     crate::FIXED_COSTS
                 ));
-                balance -= crate::FIXED_COSTS;
             }
-            RoundResult::InProgress => {}
+            RoundResult::InProgress => new_balance = old_balance,
         }
-        balance
+        new_balance
     }
 }
 
@@ -66,34 +64,50 @@ mod tests {
         assert_eq!(
             Bet {
                 on: hare,
-                amount: 10.0
+                amount: 10
             }
-            .next_balance(100.0, &RoundResult::Winner(hare)),
-            110.0
+            .next_balance(100, &RoundResult::Winner(hare)),
+            110 - crate::FIXED_COSTS
         );
         assert_eq!(
             Bet {
                 on: tortoise,
-                amount: 10.0
+                amount: 10
             }
-            .next_balance(100.0, &RoundResult::Winner(hare)),
-            90.0
+            .next_balance(100, &RoundResult::Winner(hare)),
+            90 - crate::FIXED_COSTS
         );
         assert_eq!(
             Bet {
                 on: hare,
-                amount: 50.0
+                amount: 50
             }
-            .next_balance(200.0, &RoundResult::Winner(tortoise)),
-            150.0
+            .next_balance(200, &RoundResult::Winner(tortoise)),
+            150 - crate::FIXED_COSTS
         );
         assert_eq!(
             Bet {
                 on: tortoise,
-                amount: 50.0
+                amount: 50
             }
-            .next_balance(200.0, &RoundResult::Winner(tortoise)),
-            250.0
+            .next_balance(200, &RoundResult::Winner(tortoise)),
+            250 - crate::FIXED_COSTS
+        );
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 50
+            }
+            .next_balance(200, &RoundResult::InProgress),
+            200
+        );
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 350
+            }
+            .next_balance(1000, &RoundResult::InProgress),
+            1000
         );
     }
 }

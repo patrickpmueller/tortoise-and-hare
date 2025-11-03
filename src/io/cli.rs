@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::{Animal, RoundResult, WinnerTable};
+use crate::{Animal, RoundResult, stats::WinnerTable};
 
 pub fn another_race() -> bool {
     input_bool("Do you want to start another race [Y/n]? ")

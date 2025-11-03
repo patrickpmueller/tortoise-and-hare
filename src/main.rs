@@ -1,4 +1,6 @@
-use mini_project::{Animal, INITIAL_BALANCE, RoundResult, WinnerTable, betting::Bet, io, race};
+use mini_project::{
+    Animal, INITIAL_BALANCE, RoundResult, betting::Bet, io, race, stats::WinnerTable,
+};
 
 fn main() {
     io::cli::message("Welcome to The Hare and Tortoise Game!");
@@ -9,7 +11,7 @@ fn main() {
     if io::cli::get_load_savegame() {
         (winners, balance) = io::savegames::load_game();
     } else {
-        winners = WinnerTable::new();
+        winners = WinnerTable::default();
         balance = INITIAL_BALANCE;
     }
     io::cli::sep();
