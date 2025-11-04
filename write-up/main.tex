@@ -2,7 +2,7 @@
 \usepackage[a4paper,margin=2cm]{geometry}
 \title{%
     The Hare and the Tortoise \\
-    \large A mini project \\
+    \large A Mini Project \\
 }
 \author{Patrick Pellacani Muller}
 \setcounter{section}{-1}
@@ -135,12 +135,14 @@ program's lifecycle.
 	\centering
 	\begin{tabular}{ | c c | }
 		\hline
-		Name                               & type              \\
+		Name                               & type                \\
 		\hline
-		\texttt{race\_length}              & \texttt{u32}      \\
-		\texttt{tortoise\_speed\_interval} & \texttt{Interval} \\
-		\texttt{hare\_speed\_interval}     & \texttt{Interval} \\
-		\texttt{hare\_sleep\_chance}       & \texttt{f64}      \\
+		\texttt{RACE\_LENGTH}              & \texttt{u32}        \\
+		\texttt{TORTOISE\_SPEED\_INTERVAL} & \texttt{(f64, f64)} \\
+		\texttt{HARE\_SPEED\_INTERVAL}     & \texttt{(f64, f64)} \\
+		\texttt{HARE\_SLEEP\_CHANCE}       & \texttt{f64}        \\
+		\texttt{FIXED\_COSTS}              & \texttt{i32}        \\
+		\texttt{INITIAL\_BALANCE}          & \texttt{i32}        \\
 		\hline
 	\end{tabular}
 	\caption{Constants used in the game}%
@@ -154,8 +156,9 @@ program's lifecycle.
 		\texttt{hare}     & \texttt{Hare}        \\
 		\texttt{tortoise} & \texttt{Tortoise}    \\
 		\texttt{winners}  & \texttt{WinnerTable} \\
-		\texttt{money}    & \texttt{f64}         \\
+		\texttt{balance}  & \texttt{32}          \\
 		\texttt{bet}      & \texttt{Bet}         \\ \hline
+		\texttt{animals}  & \texttt{Vec<Animal>} \\ \hline
 	\end{tabular}
 	\caption{Variables used in the game}
 	\label{tab:vars}
