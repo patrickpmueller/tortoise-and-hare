@@ -7,8 +7,10 @@
 \author{Patrick Pellacani Muller}
 \setcounter{section}{-1}
 
+\usepackage{float}
 \usepackage{siunitx}
 \usepackage{minted}
+\usemintedstyle{colorful}
 
 % tikz setup
 \usepackage{tikz}
@@ -56,7 +58,14 @@
 \addbibresource{sources.bib}
 
 \begin{document}
+
+
 \maketitle
+
+
+\tableofcontents
+
+
 \section{Introduction}
 \subsection{Purpose}
 The main purpose of the program is entertainment as it is a game to be enjoyed. It
@@ -87,12 +96,7 @@ for the simulation are:
 
 The betting system has odds set out to increase the user's "carrots" slightly if the fee for
 playing a new round is not taken into account. However, as there is a fee to play each round,
-on average, the number of carrots that a player has tends to zero. More on the specific carrot
-mechanic in the Betting section REFERENCE TODO, where the required cost will be calculated to allow the
-game to end by getting an overall tendency towards zero.
-
-Movement of the animals will be further discussed later in REFERENCE TODO. Problems like distribution
-within the movement ranges, and who wins including if/when ties exist.
+on average, the number of carrots that a player has tends to zero.
 
 \subsection{Why a computational approach was used}
 \label{sec:approach}
@@ -142,11 +146,11 @@ to think about how the betting mechanic works, and instead leave that up to the 
 to hanlde. This improves efficiency when developing and allows for greater extensibility later in the
 program's lifecycle.
 
-\begin{table}[!ht]
+\begin{table}[!h]
 	\centering
 	\begin{tabular}{ | c c | }
 		\hline
-		Name                               & type                \\
+		Name                               & Type                \\
 		\hline
 		\texttt{RACE\_LENGTH}              & \texttt{f64}        \\
 		\texttt{TORTOISE\_SPEED\_INTERVAL} & \texttt{(f64, f64)} \\
@@ -159,11 +163,11 @@ program's lifecycle.
 	\caption{Constants used in the game}%
 	\label{tab:consts}
 \end{table}
-\begin{table}[!ht]
+\begin{table}[!h]
 	\centering
 	\begin{tabular}{ | c c | }
 		\hline
-		Name              & type                     \\ \hline
+		Name              & Type                     \\ \hline
 		\texttt{winners}  & \texttt{mut WinnerTable} \\
 		\texttt{balance}  & \texttt{mut i32}         \\
 		\texttt{bet}      & \texttt{mut Bet}         \\
@@ -176,7 +180,7 @@ program's lifecycle.
 	\label{tab:vars}
 \end{table}
 
-\begin{figure}[!ht]
+\begin{figure}[!h]
 	\centering
 	\begin{tikzpicture}[
 			struct/.style={
@@ -273,7 +277,7 @@ give an engaging yet simple game loop which can be easily understood by younger 
 enjoyable. Savegame functionality is also implemented.
 
 \begin{listing}
-	\begin{minted}[frame=lines]{text}
+	\begin{minted}[frame=lines, linenos, autogobble]{text}
 	DEF balance
 	load_savegame()
 	DO
@@ -297,7 +301,7 @@ enjoyable. Savegame functionality is also implemented.
 	\caption{A pseudocode overview of the main program.}
 	\label{lst:psd-overview}
 \end{listing}
-\begin{figure}[!ht]
+\begin{figure}[!h]
 	\centering
 	\begin{tikzpicture}[node distance=1.1cm]
 
@@ -366,7 +370,7 @@ found in the crate) and their function:
 	\item I/O (stands for Input/Output): manages displaying results to the user, getting input
 	      from the user, including any validation necessary; furthermore, \texttt{io} crate also manages
 	      savegames and stats management, as all these are part of inputting and outputting data for the user;
-	      contains two submodules: \texttt{cli} and \texttt{savegames}. Possibility for future gui interfaces
+	      contains two submodules: \texttt{cli} and \texttt{savegames}. Possibility for future GUI interfaces
 	      would be implemented in this crate using a \texttt{gui} submodule.
 	\item Race: manages the race logic, including movement of the hare and tortoise, and the end
 	      condition; contains two \texttt{mod}s: \texttt{movement} and \texttt{finish}
@@ -383,7 +387,7 @@ such as changing the order of the game loop, or compiling different games with d
 reusing the existing library crates and building a new binary crate. This would allow for different versions of
 the same game, for example differing in interface or difficulty, to be compiled from a single library.
 
-\begin{figure}[!ht]
+\begin{figure}[!h]
 	\centering
 	\begin{tikzpicture}[node distance=0.5cm]
 
@@ -427,7 +431,20 @@ the same game, for example differing in interface or difficulty, to be compiled 
 \end{figure}
 
 \section{In-depth Gameplay analysis}
+During gameplay testing, a large problem that occured is that the hare nearly always wins. The
+probabilities are not chosen well enough to allow for a balanced gameplay experience. Due to this,
+ties are also nearly never happen.
 
+A starting carrots of 300 and a round-on-round cost of 20 carrots were chosen as they seem to deliver
+balanced gameplay which is fun but still leads to the eventual end of the game.
+
+The gameplay is relatively engaging for about 5 minutes, after which it becomes boring. This may be the result of the game being
+entirely CLI based, and therefore a good extension to the game would be adding a GUI.
+
+As draws should be possible, gameplay testing has shown that the only way they realistically happen is to disregard any progress
+past the finishing distance. This means that if the hare's distance is 1000.1m and the tortoise's distance is 1008.3m after a
+given round, that is counted as a draw. The user doesn't know this and it therefore positively impacts gameplay as it adds to the
+excitement by making draws possible, even though this may be slightly unrealistic.
 
 \section{Testing}
 \subsection{Inputs and testing approach}
@@ -455,9 +472,157 @@ Furthermore, testing after development with valid, boundary, invalid and erroneo
 that the whole program works as expected. This data is outlined in Section~\ref{sec:whole-test}.
 \subsection{Unit Testing}
 \label{sec:unit-test}
+Unit testing was sucessfully used during the development process in the \texttt{race}, \texttt{betting} and \texttt{stats}
+modules. This can be exemplified when unit testing was used to catch a logic error in the \texttt{betting} module which
+didn't account for draws properly.
+
+The testing framework used is the default built-in testing framework part of the Rust language, which can be run using
+\texttt{cargo test}, resulting in the output seen in Listing~\ref{lst:test-fail} when a unit test failed as the draw logic was
+programmed wrong.
+
+Test data used for \texttt{betting} unit tests can be found in Table~\ref{tab:unit-tests-betting}.
+Table~\ref{tab:unit-tests-stats} contains \texttt{stats} unit tests. This unit test starts with an empty \texttt{WinnerTable}
+struct and populates it as shown in the Table~\ref{tab:unit-tests-stats}. Finally, the \texttt{race} module is tested in two
+parts. The movement submodule is tested by first giving the hare a \texttt{sleep\_chance} of 1.0 and ensuring it doesn't move.
+Then, the pseudo-random number generator is seeded with a special seed, whose outcome is known at compile time, and can therefore
+be predicted. This is used to test the random sleep chance with multiple known values.
+Finally, both the tortoise and a hare with a sleep chance of 0.0 are moved multiple times and it is ensured that they each time
+their movement is within their respective movement interval. The test data used for testing the \texttt{finish} submodule is
+shown in Table~\ref{tab:unit-tests-finish}.
+
+
+
+\begin{table}[!h]
+	\centering
+	\begin{tabular}{ | c c c c | c | c | }
+		\hline
+		Round state  & Bal. before & Bet on   & Bet amount & Exp. bal. after & Act bal. after \\ \hline
+		Hare won     & 100         & Hare     & 10         & 90              & 90             \\
+		Hare won     & 100         & Tortoise & 10         & 70              & 70             \\
+		Tortoise won & 200         & Hare     & 50         & 130             & 130            \\
+		Tortoise won & 200         & Tortoise & 50         & 230             & 230            \\
+		Draw         & 500         & Tortoise & 200        & 280             & 280            \\
+		Draw         & 500         & Hare     & 200        & 280             & 280            \\
+		In Progress  & 200         & Tortoise & 50         & 200             & 200            \\
+		In Progress  & 1000        & Hare     & 350        & 1000            & 1000           \\ \hline
+	\end{tabular}
+	\caption{\texttt{betting} unit test data}
+	\label{tab:unit-tests-betting}
+\end{table}
+
+\begin{table}[!h]
+	\centering
+	\begin{tabular}{ | c | c c c | c c c |}
+		\hline
+		Result       & Exp. hare & Exp. tortoise & Exp. draw & Act. hare & Act. tortoise & Act. draw \\ \hline
+		Draw         & 0         & 0             & 1         & 0         & 0             & 1         \\
+		In Progress  & 0         & 0             & 1         & 0         & 0             & 1         \\
+		Hare won     & 1         & 0             & 1         & 1         & 0             & 1         \\
+		Tortoise won & 1         & 1             & 1         & 1         & 1             & 1         \\
+		Tortoise won & 1         & 2             & 1         & 1         & 2             & 1         \\ \hline
+	\end{tabular}
+	\caption{\texttt{stats} unit test data}
+	\label{tab:unit-tests-stats}
+\end{table}
+
+\begin{table}[!h]
+	\centering
+	\begin{tabular}{ | c c | c | c | }
+		\hline
+		Hare dist & Tortoise dist & Exp. round state & Act. round state \\ \hline
+		0         & 0             & In Progress      & In Progress      \\
+		0         & 1.7           & In Progress      & In Progress      \\
+		2.3       & 1.7           & In Progress      & In Progress      \\
+		0         & 1000          & Tortoise won     & Tortoise won     \\
+		2.3       & 1003.6        & Tortoise won     & Tortoise won     \\
+		1000      & 1000          & Draw             & Draw             \\
+		1003.6    & 1000          & Draw             & Draw             \\
+		1003.6    & 1003.6        & Draw             & Draw             \\
+		1000      & 1003.6        & Draw             & Draw             \\
+		1000      & 1.7           & Hare won         & Hare won         \\ \hline
+	\end{tabular}
+	\caption{\texttt{finish} unit test data}
+	\label{tab:unit-tests-finish}
+\end{table}
+
+\begin{listing}[!h]
+	\begin{minted}[frame=lines]{text}
+running 4 tests
+test race::movement::tests::test_move_animals ... ok
+test betting::tests::test_update_balance ... FAILED
+test race::finish::tests::test_winner ... ok
+test stats::tests::test_winner_table_update ... ok
+
+failures:
+
+---- betting::tests::test_update_balance stdout ----
+You have won your bet and get 10 more carrots.
+The animals are hungry need to eat. You give them 20 carrots.
+You have lost your bet and have to give 10 carrots away.
+The animals are hungry need to eat. You give them 20 carrots.
+You have lost your bet and have to give 50 carrots away.
+The animals are hungry need to eat. You give them 20 carrots.
+You have won your bet and get 50 more carrots.
+The animals are hungry need to eat. You give them 20 carrots.
+
+thread 'betting::tests::test_update_balance' panicked at src/betting.rs:113:9:
+assertion `left == right` failed
+  left: 500
+ right: 280
+	\end{minted}
+	\caption{\texttt{cargo test} output showing some unit tests failing}
+	\label{lst:test-fail}
+\end{listing}
+
 \subsection{Validation Testing}
 \label{sec:whole-test}
-\subsection{Test results}
-\section{Source code}
+
+Most of the validation testing was done through play testing after the program has finished. This also included testing the
+\texttt{io} module, as that is difficult to do using unit tests. The savegame functionality works perfectly, and so does playing
+the rounds. To facilitate this testing, different variables were printed to the console one at a time, and manually checked to
+make sure that they are behaving as expected. These included \texttt{winners}, \texttt{bet} and \texttt{animals}.
+
+A logic error was cought this way, as at the end of a race the animals were not reset back to 0, and instead carried on racing
+from their previous distance. This bug was fixed by resetting the \texttt{animals} vec with a fresh one at the end of every race.
+
 \section{Evaluation}
+This game's main shortfalls are the lack of a GUI which makes it less engaging. Furthermore the probablities and money values
+would have to be further tweaked to make it a fun to play and balanced. This would include a lot of play testing.
+The modular design that this project was built of makes expanding the code to fit new requirements quick and easy.
+
+Another feature that is missing is the ability to save multiple savegames and name the animals however the player wants to. All
+of these can be implemented relatively easily by editing the right module.
+
+The testing strategy was a success and cought a few bugs, making the program less frustrating to use for the user and better at
+fulfilling its purpose, entertaining the user.
+
+
+\appendix
+
+
+\section{Source code}
+\begin{samepage}
+	The source code is organised as such:
+	\begin{minted}{text}
+src
+|-- betting.rs
+|-- io
+|   |-- cli.rs
+|   `-- savegames.rs
+|-- io.rs
+|-- lib.rs
+|-- main.rs
+|-- race
+|   |-- finish.rs
+|   `-- movement.rs
+|-- race.rs
+|-- stats.rs
+\end{minted}
+\end{samepage}
+
+Full source code:
+\inputminted[frame=lines]{rust}{../combined.txt}
+
+\printbibliography[heading=bibnumbered]
+
 \end{document}

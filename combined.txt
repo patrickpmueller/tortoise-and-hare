@@ -1,0 +1,752 @@
+// ======= src/betting.rs ======= //
+use crate::{Animal, RoundResult, io};
+
+#[derive(Clone, Copy)]
+pub struct Bet {
+    pub amount: i32,
+    pub on: Animal,
+}
+
+impl Bet {
+    pub fn new_from_input(animals: &Vec<Animal>, balance: i32) -> Bet {
+        let on = io::cli::get_bet_animal(animals);
+        let amount = io::cli::get_bet_amount(on, balance);
+        Bet { on, amount }
+    }
+
+    pub fn next_balance(&self, old_balance: i32, result: &RoundResult) -> i32 {
+        let new_balance;
+        match result {
+            RoundResult::Draw => {
+                new_balance = old_balance - self.amount - crate::FIXED_COSTS;
+                io::cli::message(&format!(
+                    "You have lost your bet and have to give {} carrots away.",
+                    self.amount
+                ));
+            }
+            RoundResult::Winner(winner) => {
+                if self.on.get_animal() == winner.get_animal() {
+                    new_balance = old_balance + self.amount - crate::FIXED_COSTS;
+                    io::cli::message(&format!(
+                        "You have won your bet and get {} more carrots.",
+                        self.amount
+                    ));
+                } else {
+                    new_balance = old_balance - self.amount - crate::FIXED_COSTS;
+                    io::cli::message(&format!(
+                        "You have lost your bet and have to give {} carrots away.",
+                        self.amount
+                    ));
+                }
+
+                io::cli::message(&format!(
+                    "The animals are hungry need to eat. You give them {} carrots.",
+                    crate::FIXED_COSTS
+                ));
+            }
+            RoundResult::InProgress => new_balance = old_balance,
+        }
+        new_balance
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_balance() {
+        let hare = Animal::Hare(crate::Hare {
+            dist: 0.0,
+            sleep_chance: 0.0,
+        });
+        let tortoise = Animal::Tortoise(crate::Tortoise { dist: 0.0 });
+
+        assert_eq!(
+            Bet {
+                on: hare,
+                amount: 10
+            }
+            .next_balance(100, &RoundResult::Winner(hare)),
+            110 - crate::FIXED_COSTS
+        );
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 10
+            }
+            .next_balance(100, &RoundResult::Winner(hare)),
+            90 - crate::FIXED_COSTS
+        );
+        assert_eq!(
+            Bet {
+                on: hare,
+                amount: 50
+            }
+            .next_balance(200, &RoundResult::Winner(tortoise)),
+            150 - crate::FIXED_COSTS
+        );
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 50
+            }
+            .next_balance(200, &RoundResult::Winner(tortoise)),
+            250 - crate::FIXED_COSTS
+        );
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 50
+            }
+            .next_balance(200, &RoundResult::InProgress),
+            200
+        );
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 350
+            }
+            .next_balance(1000, &RoundResult::InProgress),
+            1000
+        );
+
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 200
+            }
+            .next_balance(500, &RoundResult::Draw),
+            300 - crate::FIXED_COSTS
+        );
+
+        assert_eq!(
+            Bet {
+                on: hare,
+                amount: 200
+            }
+            .next_balance(500, &RoundResult::Draw),
+            300 - crate::FIXED_COSTS
+        );
+    }
+}
+
+
+// ======= src/stats.rs ======= //
+use crate::{Animal, RoundResult};
+
+#[derive(Clone, Copy, Default, PartialEq, Debug)]
+pub struct WinnerTable {
+    pub hare: u32,
+    pub tortoise: u32,
+    pub draw: u32,
+}
+
+impl WinnerTable {
+    pub fn update(&mut self, winner: &RoundResult) {
+        match winner {
+            RoundResult::Draw => self.draw += 1,
+            RoundResult::Winner(winner) => match winner {
+                Animal::Hare(_) => self.hare += 1,
+                Animal::Tortoise(_) => self.tortoise += 1,
+            },
+            _ => {}
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_winner_table_update() {
+        let mut table = WinnerTable::default();
+        let hare = Animal::Hare(crate::Hare {
+            dist: 0.0,
+            sleep_chance: 0.0,
+        });
+        let tortoise = Animal::Tortoise(crate::Tortoise { dist: 0.0 });
+
+        table.update(&RoundResult::Draw);
+        assert_eq!(
+            table,
+            WinnerTable {
+                hare: 0,
+                tortoise: 0,
+                draw: 1,
+            }
+        );
+
+        table.update(&RoundResult::InProgress);
+        assert_eq!(
+            table,
+            WinnerTable {
+                hare: 0,
+                tortoise: 0,
+                draw: 1,
+            }
+        );
+
+        table.update(&RoundResult::Winner(hare));
+        assert_eq!(
+            table,
+            WinnerTable {
+                hare: 1,
+                tortoise: 0,
+                draw: 1,
+            }
+        );
+
+        table.update(&RoundResult::Winner(tortoise));
+        assert_eq!(
+            table,
+            WinnerTable {
+                hare: 1,
+                tortoise: 1,
+                draw: 1,
+            }
+        );
+
+        table.update(&RoundResult::Winner(tortoise));
+        assert_eq!(
+            table,
+            WinnerTable {
+                hare: 1,
+                tortoise: 2,
+                draw: 1,
+            }
+        );
+    }
+}
+
+
+// ======= src/main.rs ======= //
+use mini_project::{
+    Animal, INITIAL_BALANCE, RoundResult, betting::Bet, io, race, stats::WinnerTable,
+};
+
+fn main() {
+    io::cli::message("Welcome to The Hare and Tortoise Game!");
+    io::cli::sep();
+
+    let mut winners;
+    let mut balance: i32;
+    if io::cli::get_load_savegame() {
+        (winners, balance) = io::savegames::load_game();
+    } else {
+        winners = WinnerTable::default();
+        balance = INITIAL_BALANCE;
+    }
+    io::cli::sep();
+
+    let mut animals = Animal::new_animals_vec();
+    io::cli::message(&format!("You have {balance} carrots."));
+    let mut bet = Bet::new_from_input(&animals, balance);
+    io::cli::sep();
+
+    loop {
+        // plays a round and gets the result
+        let result = race::finish::get_result(&animals);
+        match result {
+            RoundResult::Draw | RoundResult::Winner(_) => {
+                io::cli::output_winner(&result);
+                balance = bet.next_balance(balance, &result);
+                winners.update(&result);
+
+                if balance < 0 {
+                    io::cli::sep();
+                    io::cli::message(
+                        "You do not have enough carrots left and the animals starve.\n\
+                        Game Over!",
+                    );
+                    io::savegames::delete();
+                    io::cli::output_stats(&winners);
+                    return;
+                }
+
+                io::cli::sep();
+                if !io::cli::another_race() {
+                    io::cli::output_stats(&winners);
+                    io::savegames::store_game(winners, balance);
+                    io::cli::sep();
+                    io::cli::message("Game Saved. Goodbye!");
+
+                    return;
+                }
+                io::cli::sep();
+                io::cli::message(&format!("You have {balance} carrots."));
+                animals = Animal::new_animals_vec();
+                bet = Bet::new_from_input(&animals, balance);
+            }
+            RoundResult::InProgress => {
+                animals = race::movement::move_animals(animals);
+            }
+        }
+    }
+}
+
+
+// ======= src/io/cli.rs ======= //
+use std::io::{self, Write};
+
+use crate::{Animal, RoundResult, stats::WinnerTable};
+
+pub fn another_race() -> bool {
+    input_bool("Do you want to start another race [Y/n]? ")
+}
+
+pub fn get_load_savegame() -> bool {
+    input_bool("Do you want to load a savegame [Y/n]? ")
+}
+
+fn input_bool(msg: &str) -> bool {
+    print!("{msg}");
+    io::stdout().flush().expect("Error when flushing stdout.");
+
+    let mut buffer = String::new();
+    io::stdin()
+        .read_line(&mut buffer)
+        .expect("Error when reading from stdin.");
+
+    match buffer.trim().to_lowercase().as_str() {
+        "y" | "yes" | "" => true,
+        "n" | "no" => false,
+        _ => input_bool(msg),
+    }
+}
+
+pub fn sep() {
+    println!();
+}
+
+pub fn message(msg: &str) {
+    println!("{msg}");
+}
+
+pub fn output_stats(table: &WinnerTable) {
+    println!(
+        "The hare has won {} times, the tortoise has won {} times and there were {} ties.",
+        table.hare, table.tortoise, table.draw
+    );
+}
+
+pub fn output_winner(result: &RoundResult) {
+    match result {
+        RoundResult::Draw => println!(
+            "The hare and the tortoise went through the finish line together. The race ends in a draw!"
+        ),
+        RoundResult::Winner(w) => match w {
+            Animal::Hare(_) => println!("The hare won through its incredible speed!"),
+            Animal::Tortoise(_) => {
+                println!("The tortoise won by taking the race slow and steady!")
+            }
+        },
+        RoundResult::InProgress => {}
+    }
+}
+
+// Takes hare in pos 0 and tortoise in pos 1
+pub fn get_bet_animal(animals: &Vec<Animal>) -> Animal {
+    print!(
+        "Which of the following animals do you want to bet on?\n\
+        The available options are: Hare and Tortoise\n\
+        Enter your chosen animal: ",
+    );
+    io::stdout().flush().expect("Error when flushing stdout.");
+
+    let mut buffer = String::new();
+    io::stdin()
+        .read_line(&mut buffer)
+        .expect("Error when reading from stdin.");
+
+    if let Some(animal) = validate_animal(&buffer, animals) {
+        animal
+    } else {
+        get_bet_animal(animals)
+    }
+}
+
+pub fn get_bet_amount(animal_bet_on: Animal, balance: i32) -> i32 {
+    print!(
+        "How many carrots do you want to bet on the {}? ",
+        animal_bet_on.get_animal()
+    );
+    io::stdout().flush().expect("Error when flushing stdout.");
+    let mut buffer = String::new();
+    io::stdin()
+        .read_line(&mut buffer)
+        .expect("Error when reading from stdin.");
+
+    match validate_bet_amount(&buffer, balance) {
+        Some(n) => n,
+        None => get_bet_amount(animal_bet_on, balance),
+    }
+}
+
+fn validate_bet_amount(inp: &str, balance: i32) -> Option<i32> {
+    match inp.trim().parse() {
+        Ok(n) if n <= balance && n >= 0 => Some(n),
+        _ => None,
+    }
+}
+
+fn validate_animal(inp: &str, animals: &Vec<Animal>) -> Option<Animal> {
+    assert_eq!(animals[0].get_animal(), "hare");
+    assert_eq!(animals[1].get_animal(), "tortoise");
+
+    match inp.trim().to_lowercase().as_str() {
+        "hare" | "h" | "1" => Some(animals[0]),
+        "tortoise" | "t" | "2" => Some(animals[1]),
+        _ => None,
+    }
+}
+
+
+// ======= src/io/savegames.rs ======= //
+use std::io::prelude::*;
+use std::{fs::File, path::Path};
+
+use sha3::{Digest, Sha3_256};
+
+use crate::stats::WinnerTable;
+
+pub fn delete() {
+    let path = Path::new("t_and_h_savegame.csv");
+    let display = path.display();
+
+    let mut file = match File::create(path) {
+        Err(why) => panic!("Error: Couldn't create  file {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    if let Err(why) = file.write_all(b"") {
+        panic!("Error: Couldn't write to {}: {}", display, why);
+    }
+}
+
+pub fn store_game(stats: WinnerTable, balance: i32) {
+    let data = format!(
+        "{},{},{},{}",
+        stats.hare, stats.tortoise, stats.draw, balance
+    );
+    let mut hasher = Sha3_256::new();
+    hasher.update(format!("{}.salted!{}", data, "0211065ebe237db4dee6e8dcbaa5db74").as_bytes());
+    let hash = hasher.finalize();
+
+    let path = Path::new("t_and_h_savegame.csv");
+    let display = path.display();
+
+    let mut file = match File::create(path) {
+        Err(why) => panic!("Error: Couldn't create  file {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    match file.write_all(format!("{},{}", data, hex::encode(hash)).as_bytes()) {
+        Err(why) => panic!("Error: Couldn't write to {}: {}", display, why),
+        Ok(_) => println!("Successfully saved game in the file {}", display),
+    }
+}
+
+pub fn load_game() -> (WinnerTable, i32) {
+    let path = Path::new("t_and_h_savegame.csv");
+    let display = path.display();
+
+    let mut file = match File::open(path) {
+        Err(why) => panic!("Error: Couldn't open file {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    let mut buf = String::new();
+    if let Err(why) = file.read_to_string(&mut buf) {
+        panic!("Error: Couldn't read file {}: {}", display, why);
+    }
+
+    let data: Vec<&str> = buf.split(",").collect();
+
+    let mut hasher = Sha3_256::new();
+    hasher.update(
+        format!(
+            "{},{},{},{}.salted!{}",
+            data[0], data[1], data[2], data[3], "0211065ebe237db4dee6e8dcbaa5db74"
+        )
+        .as_bytes(),
+    );
+    let hash = hasher.finalize();
+
+    let corr_error = format!("Couldn't load savegame {}: data corrputed", display);
+    if hex::encode(hash) == data[4] {
+        return (
+            WinnerTable {
+                hare: data[0].parse().expect(&corr_error),
+                tortoise: data[1].parse().expect(&corr_error),
+                draw: data[2].parse().expect(&corr_error),
+            },
+            data[3].parse().expect(&corr_error),
+        );
+    }
+    panic!("{}", &corr_error);
+}
+
+
+// ======= src/io.rs ======= //
+pub mod cli;
+pub mod savegames;
+
+
+// ======= src/race.rs ======= //
+pub mod finish;
+pub mod movement;
+
+
+// ======= src/race/finish.rs ======= //
+use crate::{Animal, RoundResult};
+
+pub fn get_result(animals: &Vec<Animal>) -> RoundResult {
+    let mut winners: Vec<&Animal> = vec![];
+    for animal in animals {
+        if animal.get_dist() >= crate::RACE_LENGTH {
+            winners.push(animal);
+        }
+    }
+
+    if winners.len() > 1 {
+        return RoundResult::Draw;
+    }
+
+    match winners.first() {
+        Some(winner) => RoundResult::Winner(**winner),
+        None => RoundResult::InProgress,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_winner() {
+        let hare_zero = Animal::Hare(crate::Hare {
+            dist: 0.0,
+            sleep_chance: crate::HARE_SLEEP_CHANCE,
+        });
+        let hare_not_finished = Animal::Hare(crate::Hare {
+            dist: 2.3,
+            sleep_chance: crate::HARE_SLEEP_CHANCE,
+        });
+        let hare_at_finish = Animal::Hare(crate::Hare {
+            dist: crate::RACE_LENGTH,
+            sleep_chance: crate::HARE_SLEEP_CHANCE,
+        });
+        let hare_past_finish = Animal::Hare(crate::Hare {
+            dist: crate::RACE_LENGTH + 3.6,
+            sleep_chance: crate::HARE_SLEEP_CHANCE,
+        });
+
+        let tortoise_zero = Animal::Tortoise(crate::Tortoise { dist: 0.0 });
+        let tortoise_not_finished = Animal::Tortoise(crate::Tortoise { dist: 1.7 });
+        let tortoise_at_finish = Animal::Tortoise(crate::Tortoise {
+            dist: crate::RACE_LENGTH,
+        });
+        let tortoise_past_finish = Animal::Tortoise(crate::Tortoise {
+            dist: crate::RACE_LENGTH + 3.6,
+        });
+
+        assert_eq!(
+            get_result(&vec![hare_zero, tortoise_zero]),
+            RoundResult::InProgress
+        );
+        assert_eq!(
+            get_result(&vec![hare_zero, tortoise_not_finished]),
+            RoundResult::InProgress
+        );
+        assert_eq!(
+            get_result(&vec![hare_not_finished, tortoise_not_finished]),
+            RoundResult::InProgress
+        );
+        assert_eq!(
+            get_result(&vec![hare_zero, tortoise_at_finish]),
+            RoundResult::Winner(tortoise_at_finish)
+        );
+        assert_eq!(
+            get_result(&vec![hare_not_finished, tortoise_past_finish]),
+            RoundResult::Winner(tortoise_past_finish)
+        );
+        assert_eq!(
+            get_result(&vec![hare_at_finish, tortoise_past_finish]),
+            RoundResult::Draw
+        );
+        assert_eq!(
+            get_result(&vec![hare_at_finish, tortoise_at_finish]),
+            RoundResult::Draw
+        );
+        assert_eq!(
+            get_result(&vec![hare_past_finish, tortoise_past_finish]),
+            RoundResult::Draw
+        );
+        assert_eq!(
+            get_result(&vec![hare_at_finish, tortoise_not_finished]),
+            RoundResult::Winner(hare_at_finish)
+        );
+    }
+}
+
+
+// ======= src/race/movement.rs ======= //
+use crate::Animal;
+
+pub fn move_animals(animals: Vec<Animal>) -> Vec<Animal> {
+    let mut animals = animals;
+    for animal in &mut animals {
+        match animal {
+            Animal::Hare(hare) => {
+                if fastrand::f64() >= hare.sleep_chance {
+                    let d_dist = crate::HARE_SPEED_INTERVAL.0
+                        + (crate::HARE_SPEED_INTERVAL.1 - crate::HARE_SPEED_INTERVAL.0)
+                            * fastrand::f64();
+                    hare.dist += d_dist;
+                }
+            }
+            Animal::Tortoise(tortoise) => {
+                let d_dist = crate::TORTOISE_SPEED_INTERVAL.0
+                    + (crate::TORTOISE_SPEED_INTERVAL.1 - crate::TORTOISE_SPEED_INTERVAL.0)
+                        * fastrand::f64();
+                tortoise.dist += d_dist;
+            }
+        }
+    }
+
+    animals
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_move_animals() {
+        let hare_zero_no_sleep = Animal::Hare(crate::Hare {
+            dist: 0.0,
+            sleep_chance: 0.0,
+        });
+        let hare_twenty_no_sleep = Animal::Hare(crate::Hare {
+            dist: 20.0,
+            sleep_chance: 0.0,
+        });
+        let hare_twenty_all_sleep = Animal::Hare(crate::Hare {
+            dist: 20.0,
+            sleep_chance: 1.0,
+        });
+        let hare_zero_all_sleep = Animal::Hare(crate::Hare {
+            dist: 0.0,
+            sleep_chance: 1.0,
+        });
+
+        let tortoise_zero = Animal::Tortoise(crate::Tortoise { dist: 0.0 });
+        let tortoise_twenty = Animal::Tortoise(crate::Tortoise { dist: 20.0 });
+
+        let mut race = vec![hare_zero_all_sleep];
+        race = move_animals(race);
+        race = move_animals(race);
+        race = move_animals(race);
+        race = move_animals(race);
+        race = move_animals(race);
+        assert_eq!(race, vec![hare_zero_all_sleep]);
+
+        let mut race = vec![hare_twenty_all_sleep];
+        race = move_animals(race);
+        race = move_animals(race);
+        race = move_animals(race);
+        race = move_animals(race);
+        race = move_animals(race);
+        assert_eq!(race, vec![hare_twenty_all_sleep]);
+
+        let mut race = vec![hare_twenty_no_sleep];
+        race = move_animals(race);
+        race = move_animals(race);
+        assert!(race[0].get_dist() <= 20.0 + crate::HARE_SPEED_INTERVAL.1 * 2.0);
+        assert!(race[0].get_dist() >= 20.0 + crate::HARE_SPEED_INTERVAL.0 * 2.0);
+
+        let mut race = vec![hare_zero_no_sleep];
+        race = move_animals(race);
+        race = move_animals(race);
+        assert!(race[0].get_dist() <= 0.0 + crate::HARE_SPEED_INTERVAL.1 * 2.0);
+        assert!(race[0].get_dist() >= 0.0 + crate::HARE_SPEED_INTERVAL.0 * 2.0);
+
+        let mut race = vec![tortoise_twenty];
+        race = move_animals(race);
+        race = move_animals(race);
+        assert!(race[0].get_dist() <= 20.0 + crate::TORTOISE_SPEED_INTERVAL.1 * 2.0);
+        assert!(race[0].get_dist() >= 20.0 + crate::TORTOISE_SPEED_INTERVAL.0 * 2.0);
+
+        let mut race = vec![tortoise_zero];
+        race = move_animals(race);
+        race = move_animals(race);
+        assert!(race[0].get_dist() <= 0.0 + crate::TORTOISE_SPEED_INTERVAL.1 * 2.0);
+        assert!(race[0].get_dist() >= 0.0 + crate::TORTOISE_SPEED_INTERVAL.0 * 2.0);
+    }
+}
+
+
+// ======= src/lib.rs ======= //
+pub mod betting;
+pub mod io;
+pub mod race;
+pub mod stats;
+
+pub static RACE_LENGTH: f64 = 1000.0;
+pub static HARE_SLEEP_CHANCE: f64 = 0.25;
+pub static TORTOISE_SPEED_INTERVAL: (f64, f64) = (5.0, 10.0);
+pub static HARE_SPEED_INTERVAL: (f64, f64) = (8.0, 15.0);
+pub static FIXED_COSTS: i32 = 20;
+pub static INITIAL_BALANCE: i32 = 300;
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Animal {
+    Hare(Hare),
+    Tortoise(Tortoise),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RoundResult {
+    Winner(Animal),
+    Draw,
+    InProgress,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Hare {
+    pub dist: f64,
+    pub sleep_chance: f64,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Tortoise {
+    pub dist: f64,
+}
+
+impl Animal {
+    pub fn get_animal(&self) -> &str {
+        match self {
+            Animal::Hare(_) => "hare",
+            Animal::Tortoise(_) => "tortoise",
+        }
+    }
+
+    pub fn get_dist(&self) -> f64 {
+        match self {
+            Animal::Hare(hare) => hare.dist,
+            Animal::Tortoise(tor) => tor.dist,
+        }
+    }
+
+    pub fn new_animals_vec() -> Vec<Animal> {
+        vec![
+            Animal::Hare(Hare {
+                dist: 0.0,
+                sleep_chance: HARE_SLEEP_CHANCE,
+            }),
+            Animal::Tortoise(Tortoise { dist: 0.0 }),
+        ]
+    }
+}

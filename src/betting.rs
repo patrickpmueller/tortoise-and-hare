@@ -109,5 +109,23 @@ mod tests {
             .next_balance(1000, &RoundResult::InProgress),
             1000
         );
+
+        assert_eq!(
+            Bet {
+                on: tortoise,
+                amount: 200
+            }
+            .next_balance(500, &RoundResult::Draw),
+            300 - crate::FIXED_COSTS
+        );
+
+        assert_eq!(
+            Bet {
+                on: hare,
+                amount: 200
+            }
+            .next_balance(500, &RoundResult::Draw),
+            300 - crate::FIXED_COSTS
+        );
     }
 }
