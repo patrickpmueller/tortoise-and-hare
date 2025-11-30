@@ -17,12 +17,12 @@ fn main() {
     io::cli::sep();
 
     let mut animals = Animal::new_animals_vec();
-
     io::cli::message(&format!("You have {balance} carrots."));
     let mut bet = Bet::new_from_input(&animals, balance);
     io::cli::sep();
 
     loop {
+        // plays a round and gets the result
         let result = race::finish::get_result(&animals);
         match result {
             RoundResult::Draw | RoundResult::Winner(_) => {
@@ -52,6 +52,7 @@ fn main() {
                 }
                 io::cli::sep();
                 io::cli::message(&format!("You have {balance} carrots."));
+                animals = Animal::new_animals_vec();
                 bet = Bet::new_from_input(&animals, balance);
             }
             RoundResult::InProgress => {

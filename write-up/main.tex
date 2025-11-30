@@ -62,8 +62,8 @@
 The main purpose of the program is entertainment as it is a game to be enjoyed. It
 simulates the classic story of the tortoise and the hare. To make the game enjoyable,
 the user is asked to bet on either the hare or the tortoise. This money is then used
-to play another round as long as the user has enough money. The more rounds a user
-is able to play, the better their final score.
+to play another round as long as the user has enough money. The aim for the user is to
+play as many rounds as possible.
 \subsection{Intended user}
 Possible users of the program are younger children as the game loop is very simple and
 may not appeal as much to older children, teenagers or adults. It should therefore be easy
@@ -75,7 +75,8 @@ to collect the most "carrots" in a given number of rounds to feed \cite{hare-die
 the animals. The animals require feeding to play another round.
 \subsection{Functionality}
 A simple pseudo-random number generator based simulation of the game of ``the hare and the
-tortoise''. The initial parameters for the simulation are:
+tortoise''. The initial parameters - which are open for change and improvement -
+for the simulation are:
 \begin{itemize}
 	\item The game is divided into rounds, and finishes when the first person reaches
 	      \qty{1000}{\metre}
@@ -87,7 +88,11 @@ tortoise''. The initial parameters for the simulation are:
 The betting system has odds set out to increase the user's "carrots" slightly if the fee for
 playing a new round is not taken into account. However, as there is a fee to play each round,
 on average, the number of carrots that a player has tends to zero. More on the specific carrot
-mechanic in the Betting section.
+mechanic in the Betting section REFERENCE TODO, where the required cost will be calculated to allow the
+game to end by getting an overall tendency towards zero.
+
+Movement of the animals will be further discussed later in REFERENCE TODO. Problems like distribution
+within the movement ranges, and who wins including if/when ties exist.
 
 \subsection{Why a computational approach was used}
 \label{sec:approach}
@@ -97,6 +102,8 @@ as most children will be bored before the first game even finishes. For example,
 tortoise would take \(\frac{1000}{7.5} \approx 134\) rounds to complete a race. Assuming a dice roll
 every \qty{2}{\second}, this will take
 \(134 \times \qty{2}{\second} = \qty{268}{\second} \approx \qty{4.5}{\minute}\) of dice rolls.
+Furthermore, betting and keeping track of carrots can also be tedious and is therefore managed by
+a computer.
 
 The programming language that is used in this project is Rust \cite{rust} which provides a
 safe, compiled language. The main reasons for this is to offer security and help with data
@@ -110,20 +117,24 @@ more efficiently, which isn't a major concern right now but allows for a better 
 more complex UI and game mechanics later. Furthermore, the game is aimed at children who often do
 not have the money to buy powerful PCs, and performance could be a major factor later if new
 features get added. From a development point of view, using Rust allows for the use of modern tools
-such as functional programming to keep code neat, tidy, legible and extensible.
+such as functional programming to keep code neat, tidy, legible and extensible. The strict typing rules
+and borrow checker ensures memory safety and reduces logic and security errors.
 
 \section{Data structures}
 The constants used in the program are defined in Table~\ref{tab:consts}. These are carefully chosen
 to allow for quick changes of the game's main parameters. Variables are listed in Table~\ref{tab:vars}.
 Great care has been taken to reduce unnecessary variables while keeping code clean and readable, as
-well as ready for future expansion. Therefore, four custom structs (structured groups of data) as well as one
-enum (list of structs sharing similar properties) are used for modularity, and their relationship as well as
+well as ready for future expansion. Therefore, four custom structs (structured groups of data) as well as two
+enums (list of structs sharing similar properties) are used for modularity, and their relationship as well as
 structure can be seen in Figure~\ref{fig:structs}.
 
 The decision to make \texttt{Animal} an enum has the upside of allowing the addition of  more animals
 while minimizing the risk that the new animals aren't properly implemented in code as Rust ensures that
 all enum elements are covered whenever one is using enums. This improves the program's extensibility
 and safety greatly.
+
+\texttt{RoundResult} being an enum allows for the use of match ... case syntax to keep code clean, and makes
+testing easier as all possible varations are covered more easily.
 
 The four structs used allow the code to stay segmented and modular, therefore allowing a team of developers
 to work on the project simutaneously. For instance, when winning is being implemented, one doesn't have
@@ -137,7 +148,7 @@ program's lifecycle.
 		\hline
 		Name                               & type                \\
 		\hline
-		\texttt{RACE\_LENGTH}              & \texttt{u32}        \\
+		\texttt{RACE\_LENGTH}              & \texttt{f64}        \\
 		\texttt{TORTOISE\_SPEED\_INTERVAL} & \texttt{(f64, f64)} \\
 		\texttt{HARE\_SPEED\_INTERVAL}     & \texttt{(f64, f64)} \\
 		\texttt{HARE\_SLEEP\_CHANCE}       & \texttt{f64}        \\
@@ -152,15 +163,16 @@ program's lifecycle.
 	\centering
 	\begin{tabular}{ | c c | }
 		\hline
-		Name              & type                 \\ \hline
-		\texttt{hare}     & \texttt{Hare}        \\
-		\texttt{tortoise} & \texttt{Tortoise}    \\
-		\texttt{winners}  & \texttt{WinnerTable} \\
-		\texttt{balance}  & \texttt{32}          \\
-		\texttt{bet}      & \texttt{Bet}         \\ \hline
-		\texttt{animals}  & \texttt{Vec<Animal>} \\ \hline
+		Name              & type                     \\ \hline
+		\texttt{winners}  & \texttt{mut WinnerTable} \\
+		\texttt{balance}  & \texttt{mut i32}         \\
+		\texttt{bet}      & \texttt{mut Bet}         \\
+		\texttt{animals}  & \texttt{mut Vec<Animal>} \\ \hline
+		\texttt{tortoise} & \texttt{Tortoise}        \\
+		\texttt{result}   & \texttt{Result}          \\
+		\texttt{hare}     & \texttt{Hare}            \\ \hline
 	\end{tabular}
-	\caption{Variables used in the game}
+	\caption{Variables used in the game loop}
 	\label{tab:vars}
 \end{table}
 
@@ -181,53 +193,69 @@ program's lifecycle.
 		% Animal enum
 		\node[struct] (animal) {
 			\begin{tabular}{l}
-				\multicolumn{1}{c}{Animal} \\ \hline
-				Hare(Hare)                 \\
-				Tortoise(Tortoise)         \\
+				\multicolumn{1}{c}{enum Animal}        \\ \hline
+				Hare(Hare)                             \\
+				Tortoise(Tortoise)                     \\ \hline
+				pub get\_animal(\&self) -> \&str       \\
+				pub get\_dist(\&self) -> f64           \\
+				pub new\_animals\_vec() -> Vec<Animal> \\
 			\end{tabular}
 		};
 
 		% Hare struct
-		\node[struct, below left=1.5cm and -0.3cm of animal] (hare) {
+		\node[struct, below left=2.0cm and -3.2cm of animal] (hare) {
 			\begin{tabular}{l}
-				\multicolumn{1}{c}{Hare} \\ \hline
-				dist: f64                \\
-				sleep\_chance: f64       \\
+				\multicolumn{1}{c}{struct Hare} \\ \hline
+				pub dist: f64                   \\
+				pub sleep\_chance: f64          \\
 			\end{tabular}
 		};
 
 		% Tortoise struct
-		\node[struct, below right=1.5cm and -0.3cm of animal] (tortoise) {
+		\node[struct, below right=2.0cm and -3.2cm of animal] (tortoise) {
 			\begin{tabular}{l}
-				\multicolumn{1}{c}{Tortoise} \\ \hline
-				dist: f64                    \\
+				\multicolumn{1}{c}{struct Tortoise} \\ \hline
+				pub dist: f64                       \\
 			\end{tabular}
 		};
 
 		% WinnerTable struct
-		\node[struct, right=4cm of animal] (winner) {
+		\node[struct, right=2cm of animal] (winner) {
 			\begin{tabular}{l}
-				\multicolumn{1}{c}{WinnerTable} \\ \hline
-				hare: u32                       \\
-				tortoise: u32                   \\
-				draw: u32                       \\
+				\multicolumn{1}{c}{struct WinnerTable} \\ \hline
+				pub hare: u32                          \\
+				pub tortoise: u32                      \\
+				pub draw: u32                          \\
 			\end{tabular}
 		};
 
 		% Bet struct
-		\node[struct, above left=1.5cm and -0.3cm of animal] (bet) {
+		\node[struct, above right=2cm and -10.5cm of animal] (bet) {
 			\begin{tabular}{l}
-				\multicolumn{1}{c}{Bet} \\ \hline
-				amount: f64             \\
-				on: Animal              \\
+				\multicolumn{1}{c}{struct Bet}                                             \\ \hline
+				pub amount: f64                                                            \\
+				pub on: Animal                                                             \\ \hline
+				pub new\_from\_input(animals: \&Vec<Animals>, balance: i32) -> Bet         \\
+				pub next\_balance(\&self, old\_balance: i32, result: \&RoundResult) -> i32 \\
+			\end{tabular}
+		};
+
+		% RoundResult struct
+		\node[struct, below right=2cm and 2cm of animal] (roundresult) {
+			\begin{tabular}{l}
+				\multicolumn{1}{c}{enum RoundResult} \\ \hline
+				Winner(Animal)                       \\
+				Draw                                 \\
+				InProgress                           \\
 			\end{tabular}
 		};
 
 		% Connections
-		\draw[->, thick] (animal.east) -- node[above,sloped]{stores race results in} (winner.west);
-		\draw[<-, thick] (hare.north) -- node[above,sloped]{includes} (animal.south west);
-		\draw[<-, thick] (tortoise.north) -- node[above,sloped]{includes} (animal.south east);
-		\draw[->, thick] (bet.south) -- node[below,sloped]{includes} (animal.north west);
+		\draw[->, thick] (animal.east) -- node[above,sloped]{stores in} (winner.west);
+		\draw[<-, thick] (hare.north) -- node[above,sloped]{includes} (animal.south);
+		\draw[<-, thick] (tortoise.north) -- node[above,sloped]{includes} (animal.south);
+		\draw[->, thick] (bet.south) -- node[below,sloped]{includes} (animal.north);
+		\draw[->, thick] (roundresult.north west) -- node[below,sloped]{includes} (animal.south east);
 	\end{tikzpicture}
 	\caption{The structure diagram of the \texttt{struct}s \texttt{Hare}, \texttt{Tortiose}}
 	\label{fig:structs}
@@ -237,25 +265,34 @@ program's lifecycle.
 \subsection{Overview of main algorithm}
 The flowchart in Figure~\ref{fig:flw-prgm} outlines clearly the main program loop and how the main
 part of the program calls the smaller modules. Below, the same idea can be found, written in pseudocode
-(See Listing~\ref{lst:psd-overview}). It is is meant as a visual as well as textual overview for later
-reference.
+(See Listing~\ref{lst:psd-overview}). It is is meant as a visual and textual overview for later
+reference, respectively.
 
 The game loop consists of two main parts: simulating a race, and taking and evaluating bets. These aim to
 give an engaging yet simple game loop which can be easily understood by younger users but still be
-enjoyable.
+enjoyable. Savegame functionality is also implemented.
 
 \begin{listing}
 	\begin{minted}[frame=lines]{text}
-        DO
-            bet := setup_bet(Input("How much to bet?"), Input("Who to bet on?"))
-            WHILE NOT race_ended()
-                move_animals()
-            ENDWHILE
-            announce_winner()
-            store_winner()
-            calculate_bet()
-        WHILE Input("Another Race?")
-        output_stats()
+	DEF balance
+	load_savegame()
+	DO
+		VAR bet = bet_from_input()
+		DO
+			VAR result = play_and_get_result()
+			IF result.ended() THEN
+			BREAK
+			ENDIF
+		WHILE
+		announce_winner()
+		store_winner()
+		update_balance()
+		IF balance < 0 THEN
+			break
+		ENDIF
+	WHILE Input("Another Race?")
+	output_stats()
+	write_savegame()
         \end{minted}
 	\caption{A pseudocode overview of the main program.}
 	\label{lst:psd-overview}
@@ -266,40 +303,49 @@ enjoyable.
 
 		% Nodes
 		\node (start) [startstop] {START};
-		\node (betchoice) [io, below=of start] {Betting on tortoise or hare?};
-		\node (betamt) [io, below=of betchoice] {How much to bet?};
 
-		\node (racecheck) [decision, below=of betamt, yshift=-0.3cm] {Race ended?};
-		\node (move) [subprog, below=of racecheck, yshift=-0.5cm] {Move animals};
+		\node (load_sg) [io, below=of start] {Load savegames};
 
-		\node (announce) [subprog, right=3cm of racecheck] {Announce winner};
-		\node (store) [subprog, below=of announce] {Store winner};
-		\node (money) [subprog, below=of store] {Calculate bet and money};
+		\node (init_anims) [process, below=of load_sg] {Initialize animals};
+		\node (init_bet) [io, below=of init_anims] {Ask user for bet};
 
-		\node (again) [io, below=of money] {Another race?};
-		\node (againcheck) [decision, below=of again] {Another race?};
+		\node (res) [subprog, below=of init_bet] {Play a round and get result};
+		\node (racecheck) [decision, below=of res] {Race ended?};
 
-		\node (stats) [subprog, below=of againcheck, yshift=-0.5cm] {Output stats};
-		\node (stats) [subprog, below=of againcheck, yshift=-0.5cm] {Output stats};
-		\node (stop) [startstop, below=of stats] {END};
+		\node (announce) [io, below=of racecheck, yshift=-0.1cm] {Announce winner};
+		\node (store) [process, below=of announce] {Update winners \& balance};
+
+		\node (moneycheck) [decision, below=of store] {Any carrots left?};
+
+		\node (againcheck) [decision, below=of moneycheck, yshift=-0.1cm] {Next race?};
+
+
+		\node (stats) [io, right=3cm of store] {Output stats};
+		\node (write_sg) [io, below=of stats] {Save game};
+		\node (stop) [startstop, below=of write_sg] {END};
 
 		% Arrows
-		\draw [arrow] (start) -- (betchoice);
-		\draw [arrow] (betchoice) -- (betamt);
-		\draw [arrow] (betamt) -- (racecheck);
+		\draw [arrow] (start) -- (load_sg);
+		\draw [arrow] (load_sg) -- (init_anims);
+		\draw [arrow] (init_anims) -- (init_bet);
+		\draw [arrow] (init_bet) -- (res);
+		\draw [arrow] (res) -- (racecheck);
 
-		\draw [arrow] (racecheck) -- node[anchor=east] {No} (move);
-		\draw [arrow] (move) -- ++(0,-1.2) -| ++(-3.3,4) -- (racecheck.west);
-		\draw [arrow] (racecheck) -- node[anchor=south] {Yes} (announce);
+		\draw [arrow] (racecheck.east) -| node[anchor=north east] {No} (res.south east);
+		\draw [arrow] (racecheck) -- node[anchor=south east] {Yes} (announce);
 
 		\draw [arrow] (announce) -- (store);
-		\draw [arrow] (store) -- (money);
-		\draw [arrow] (money) -- (again);
-		\draw [arrow] (again) -- (againcheck);
+		\draw [arrow] (store) -- (moneycheck);
 
-		\draw [arrow] (againcheck) -- node[anchor=east] {No} (stats);
-		\draw [arrow] (stats) -- (stop);
-		\draw [arrow] (againcheck.west) node[anchor=north] {Yes} -- ++(-10.4,0) -- ++(0,12.55) -- (betchoice.west);
+		\draw [arrow] (moneycheck.south) -- node[anchor=south east] {Yes} (againcheck.north);
+		\draw [arrow] (moneycheck.east) -- node[anchor=south east] {No} ++(+1.5,0) |- (stats);
+
+		\draw [arrow] (againcheck.west) -- node[anchor=south] {Yes} ++(-1.5,0) |- (init_anims);
+		\draw [arrow] (againcheck.east) -- node[anchor=south] {No} ++(+2.5,0) |- (stats);
+
+
+		\draw [arrow] (stats) -- (write_sg);
+		\draw [arrow] (write_sg) -- (stop);
 	\end{tikzpicture}
 	\caption{Flowchart of the main program}
 	\label{fig:flw-prgm}
@@ -307,30 +353,35 @@ enjoyable.
 \subsection{Modularity}
 \label{sec:modules}
 
-This project is split into two parts: a binary crate and a set of library crates. Crates are a collection of code
+This project is split into two parts: a binary crate and a library crate. Crates are a collection of code
 in Rust which are equivalent to libraries in other build systems. The advantage of splitting the main binary
-(which contains any code specific to this version of the program) and a set of library crates (which can be reused
+(which contains any code specific to this version of the program) and a library crate (which can be reused
 across multiple projects) is greater flexibility when updating the program.
 
-The three library crates will be \texttt{io}, \texttt{race} and \texttt{betting}. These can be independently
-developed, tested, debugged and refined. A visual overview of modules can be found in Figure~\ref{fig:structure}.
-Below is an explanation of each of the crates (and respective modules found in the crate) and their function:
+The four modules in the library crate will be \texttt{io}, \texttt{race}, \texttt{betting} and \texttt{stats}.
+These can be independently developed, tested, debugged and refined. A visual overview of modules can be found
+in Figure~\ref{fig:structure}. Below is an explanation of each of the modules (and respective submodules
+found in the crate) and their function:
 \begin{itemize}
 	\item I/O (stands for Input/Output): manages displaying results to the user, getting input
 	      from the user, including any validation necessary; furthermore, \texttt{io} crate also manages
 	      savegames and stats management, as all these are part of inputting and outputting data for the user;
-	      contains three \texttt{mod}s: \texttt{cli}, \texttt{validation} and \texttt{savegames}
+	      contains two submodules: \texttt{cli} and \texttt{savegames}. Possibility for future gui interfaces
+	      would be implemented in this crate using a \texttt{gui} submodule.
 	\item Race: manages the race logic, including movement of the hare and tortoise, and the end
 	      condition; contains two \texttt{mod}s: \texttt{movement} and \texttt{finish}
 	\item Betting: manages the betting mechanic, including odds, saving money and the price to pay per round;
-	      contains two \texttt{mod}s: \texttt{odds} and \texttt{bank}
+	      it contains the \texttt{Bet} struct which allows for this functionality.
+	\item Stats: manages keeping race statistics like which animal won and any ties that happened; contains
+	      the \texttt{WinnerTable} struct to accopmplish this
 \end{itemize}
 
 The binary crate is the final program that the user runs. It links the individual elements together as
 showin in Figure~\ref{fig:flw-prgm}. The pseudocode for this crate can be found in
 Listing~\ref{lst:psd-overview}. Separating the binary crates from the libraries allows for simple
 such as changing the order of the game loop, or compiling different games with different game loops by
-reusing the existing library crates and building a new binary crate.
+reusing the existing library crates and building a new binary crate. This would allow for different versions of
+the same game, for example differing in interface or difficulty, to be compiled from a single library.
 
 \begin{figure}[!ht]
 	\centering
@@ -340,26 +391,26 @@ reusing the existing library crates and building a new binary crate.
 		\node[structnode] (game) {Tortoise and Hare Game};
 
 		% Input module
-		\node[structnode, below left=1.5cm and 1cm of game] (io) {I/O};
+		\node[structnode, below left=1.5cm and 3cm of game] (io) {I/O};
 		\node[structnode, below=of io, xshift=1cm] (cli_io) {CLI I/O};
-		\node[structnode, below=of cli_io] (validation) {Validation};
-		\node[structnode, below=of validation] (storage) {Savegames};
+		\node[structnode, below=of cli_io] (storage) {Savegames};
 
 
 		% Race module
-		\node[structnode, below=1.5cm of game] (race) {Race};
+		\node[structnode, below left=1.5cm and -1.0cm of game] (race) {Race};
 		\node[structnode, below=of race, xshift=1cm] (move) {Movement};
 		\node[structnode, below=of move] (end) {Finish line};
 
-		% Statistics module
-		\node[structnode, below right=1.5cm and 1cm of game] (bet) {Betting};
-		\node[structnode, below=of bet, xshift=1cm] (odds) {Odds};
-		\node[structnode, below=of odds] (bank) {Bank};
+		% Betting module
+		\node[structnode, below right=1.5cm and -1.5cm of game] (bet) {Betting};
+		\node[structnode, below=of bet, xshift=1cm] (betstruct) {\texttt{Bet}};
+
+		% Stats module
+		\node[structnode, below right=1.5cm and 3cm of game] (stats) {Stats};
 
 		% Arrows
 		\draw[arrow] (game.south) -- ++(0,-0.75) -| (io);
 		\draw[arrow] (io.south west) |- (cli_io);
-		\draw[arrow] (io.south west) |- (validation);
 		\draw[arrow] (io.south west) |- (storage);
 
 		\draw[arrow] (game.south) -- ++(0,-0.75) -| (race);
@@ -367,8 +418,9 @@ reusing the existing library crates and building a new binary crate.
 		\draw[arrow] (race.south west) |- (end);
 
 		\draw[arrow] (game.south) -- ++(0,-0.75) -| (bet);
-		\draw[arrow] (bet.south west) |- (bank);
-		\draw[arrow] (bet.south west) |- (odds);
+		\draw[arrow] (bet.south west) |- (betstruct);
+
+		\draw[arrow] (game.south) -- ++(0,-0.75) -| (stats);
 	\end{tikzpicture}
 	\caption{Structure diagram outlining the three library crates and their functions}
 	\label{fig:structure}
